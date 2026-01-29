@@ -1,0 +1,13 @@
+# Dependencies
+node_modules
+
+# Environment variables
+.env
+
+# JWT Keys (keep these secret!)
+keys/
+*.pem
+
+# Logs
+*.log
+npm-debug.log*

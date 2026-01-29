@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: nutrient-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: document-engine
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - nutrient-network
+
+  # Document Engine
+  document-engine:
+    image: pspdfkit/document-engine:latest
+    container_name: nutrient-document-engine
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # Database configuration
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-password}
+      PGDATABASE: document-engine
+      PGHOST: db
+      PGPORT: 5432
+
+      # JWT Configuration
+      JWT_ALGORITHM: RS256
+      JWT_PUBLIC_KEY: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwA7XlDCL6yWTSqgZb5+M
+        GRgIayNtRZqGn2E2FVF3uT8eKAoOV0MrLvig+d99UJq2lgkoM+S6XhNxkZAo63ZA
+        Kq77V+SzBMiDAl7HOXfSUYjtZqwl9trGK4pg/iGVo2X4KVZFdNFZEJFDDW3PKyWb
+        HoF1EyXakJVeutD+vLp8mfBPlU/E1ThbdsI+sCALGMmMHkseivvTltkGfNRPTp4P
+        rRPp048g+7dSzSuc9HlrmklPvT106MQnQXBKazy9LudDPK4QIKoEio3AzDPkWaL3
+        fyhStKHxb2Yxs9VvY4uEg5LjTOjG+bg7pKM98yduQKH2yu6SwpbCT6HJr8YrH5R6
+        RQIDAQAB
+        -----END PUBLIC KEY-----
+
+      # API Authentication
+      API_AUTH_TOKEN: ${API_AUTH_TOKEN:-secret}
+
+      # Dashboard (disable in production for security)
+      DASHBOARD_ENABLED: "${DASHBOARD_ENABLED:-false}"
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-dashboard}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-secret}
+    depends_on:
+      - db
+    volumes:
+      - document-engine-assets:/assets
+    networks:
+      - nutrient-network
+
+  # Backend API Server
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: nutrient-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      # Document Engine connection
+      DOCUMENT_ENGINE_URL: http://document-engine:5000
+      API_AUTH_TOKEN: ${API_AUTH_TOKEN:-secret}
+
+      # JWT Configuration
+      JWT_ALGORITHM: RS256
+      JWT_PRIVATE_KEY_PATH: /app/keys/private_key.pem
+
+      # Server configuration
+      PORT: 3001
+      NODE_ENV: production
+
+      # Anthropic API (for text cleanup)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+      # Security
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+    volumes:
+      # Mount JWT keys from host
+      - ./server/keys:/app/keys:ro
+    depends_on:
+      - document-engine
+    networks:
+      - nutrient-network
+
+  # Optional: Frontend (if you want to serve it from Docker too)
+  # Comment this out if using GitHub Pages
+  # frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.frontend
+  #     args:
+  #       VITE_API_URL: http://localhost:3001
+  #   container_name: nutrient-frontend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - nutrient-network
+
+volumes:
+  postgres-data:
+    driver: local
+  document-engine-assets:
+    driver: local
+
+networks:
+  nutrient-network:
+    driver: bridge
