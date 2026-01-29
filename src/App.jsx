@@ -44,6 +44,11 @@ function App() {
         authPayload: { jwt },
         instant: true, // Enable real-time collaboration
 
+        // Add custom headers to bypass ngrok browser warning
+        customHeaders: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+
         // Optional: Configure auto-save behavior
         autoSaveMode: window.NutrientViewer.AutoSaveMode.INTELLIGENT,
       });
