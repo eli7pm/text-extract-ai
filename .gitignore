@@ -70,3 +70,14 @@ coverage/
 # Local configuration
 .local/
 local.config.*
+
+# Internal files (not for public repo)
+setup.sh
+setup-docker.sh
+setup-docker.py
+SETUP_GUIDE.md
+UPLOAD_FLOW.md
+DEPLOYMENT_SUMMARY.md
+docker-compose.yml
+nginx.conf
+Dockerfile.frontend
