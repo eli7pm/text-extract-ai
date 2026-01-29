@@ -12,12 +12,7 @@ export default defineConfig({
     outDir: 'dist',
     // Generate sourcemaps for production debugging (optional)
     sourcemap: false,
-    // Optimize bundle size
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.logs in production
-      },
-    },
+    // Optimize bundle size - use esbuild (default, faster)
+    minify: 'esbuild',
   },
 });
