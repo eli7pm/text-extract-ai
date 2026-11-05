@@ -42,6 +42,13 @@ but the Nutrient viewer in the browser connects to Document Engine directly usin
 returns (`DOCUMENT_ENGINE_PUBLIC_URL=http://localhost:5000`). If you expose the stack publicly,
 change `DOCUMENT_ENGINE_PUBLIC_URL` and `CORS_ORIGINS` in `backend.yaml`.
 
+## Which websites can call the backend
+
+The backend rejects (403) any browser request whose `Origin` isn't in `CORS_ORIGINS`
+(`backend.yaml`), before doing any work. CORS on its own only hides the response from other
+sites; it doesn't stop a simple request such as an upload from running. Requests without an
+`Origin` header (curl, Kubernetes probes) aren't from a web page and are allowed.
+
 ## Useful commands
 
 ```bash
