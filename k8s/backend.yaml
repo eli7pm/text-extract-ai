@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: backend }
+  template:
+    metadata:
+      labels: { app: backend }
+    spec:
+      containers:
+        - name: backend
+          # Built locally by k8s/up.sh; OrbStack's k8s shares the Docker image store, so no registry needed.
+          image: text-extract-backend:dev
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3001
+          env:
+            - { name: PORT, value: "3001" }
+            - { name: NODE_ENV, value: production }
+            # Backend -> DE over cluster DNS
+            - { name: DOCUMENT_ENGINE_URL, value: "http://document-engine:5000" }
+            # Browser -> DE (returned to the frontend for the viewer's serverUrl)
+            - { name: DOCUMENT_ENGINE_PUBLIC_URL, value: "http://localhost:5000" }
+            - { name: CORS_ORIGINS, value: "http://localhost:5173,http://localhost:4173,https://eli7pm.github.io" }
+            - { name: JWT_ALGORITHM, value: RS256 }
+            - { name: JWT_PRIVATE_KEY_PATH, value: /keys/private_key.pem }
+            - name: API_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef: { name: text-extract-secrets, key: api-auth-token }
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef: { name: text-extract-secrets, key: anthropic-api-key, optional: true }
+          volumeMounts:
+            - name: jwt-key
+              mountPath: /keys
+              readOnly: true
+          readinessProbe:
+            httpGet: { path: /health, port: 3001 }
+            periodSeconds: 5
+      volumes:
+        - name: jwt-key
+          secret:
+            secretName: text-extract-jwt
+---
+# Published on localhost by OrbStack: http://localhost:3001
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  type: LoadBalancer
+  selector: { app: backend }
+  ports:
+    - port: 3001
+      targetPort: 3001
