@@ -24,13 +24,30 @@ const PORT = process.env.PORT || 3001;
 const DOCUMENT_ENGINE_URL = process.env.DOCUMENT_ENGINE_URL;
 const DOCUMENT_ENGINE_PUBLIC_URL = process.env.DOCUMENT_ENGINE_PUBLIC_URL || DOCUMENT_ENGINE_URL;
 
-// CORS: comma-separated list of allowed origins, or unset to allow all (local dev)
-const corsOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
-  : null;
+// Allowed browser origins: comma-separated CORS_ORIGINS, "*" to allow any site,
+// or unset for the local Vite dev/preview servers only.
+const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://localhost:4173', 'http://127.0.0.1:5173'];
+const allowAnyOrigin = process.env.CORS_ORIGINS?.trim() === '*';
+const allowedOrigins = allowAnyOrigin
+  ? []
+  : process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+    : DEFAULT_ORIGINS;
+
+// Reject requests from other websites before doing any work.
+// CORS alone only stops a foreign page from *reading* the response: "simple" requests
+// (e.g. a multipart upload) are still delivered and executed. Browsers always attach an
+// Origin header to cross-site POSTs/fetches and pages cannot forge it, so checking it here
+// stops the side effect. Requests without Origin (curl, k8s probes) are not from a web page.
+app.use((req, res, next) => {
+  const origin = req.get('Origin');
+  if (allowAnyOrigin || !origin || allowedOrigins.includes(origin)) return next();
+  console.warn(`✗ Rejected request from origin ${origin}: ${req.method} ${req.path}`);
+  return res.status(403).json({ error: 'Origin not allowed' });
+});
 
 // Middleware
-app.use(cors(corsOrigins ? { origin: corsOrigins } : undefined));
+app.use(cors({ origin: allowAnyOrigin ? true : allowedOrigins }));
 app.use(express.json());
 
 // Configure multer for file uploads
