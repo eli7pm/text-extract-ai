@@ -35,9 +35,7 @@ A modern web application for viewing PDFs and extracting structured text with AI
 
 ## 📸 Screenshots
 
-![Text Extract AI Demo](https://via.placeholder.com/800x450.png?text=Upload+a+PDF+to+see+it+here)
-
-*Upload a PDF to see the split-screen viewer and text extraction in action*
+![Text Extract AI Demo](public/assets/demo-app-ss.png)
 
 ## 🚀 Local Development
 
