@@ -94,3 +94,6 @@ DOCKER_*.md
 
 #claude
 .claude
+
+# Generated local k8s secrets
+k8s/.local-secrets

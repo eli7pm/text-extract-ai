@@ -47,6 +47,7 @@ Want to run this locally or contribute?
 
 - Node.js 18+
 - pnpm
+- [OrbStack](https://orbstack.dev) with Kubernetes enabled
 
 ### Setup
 
@@ -55,14 +56,15 @@ Want to run this locally or contribute?
 git clone https://github.com/eli7pm/text-extract-ai.git
 cd text-extract-ai
 
-# Install dependencies
-pnpm install
+# Start Document Engine + backend on local Kubernetes (OrbStack)
+./k8s/up.sh
 
-# Start development server
+# Install dependencies and start the frontend
+pnpm install
 pnpm dev
 ```
 
-Open http://localhost:5173
+Open http://localhost:5173. See [`k8s/README.md`](k8s/README.md) for details on the local stack.
 
 ### Build for Production
 

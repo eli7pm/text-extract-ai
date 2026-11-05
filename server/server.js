@@ -17,8 +17,20 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Document Engine is reached at two different addresses:
+// - DOCUMENT_ENGINE_URL: used by this server (e.g. http://document-engine:5000 inside k8s)
+// - DOCUMENT_ENGINE_PUBLIC_URL: returned to the browser, which connects to DE directly
+//   for the viewer (e.g. http://localhost:5000). Defaults to DOCUMENT_ENGINE_URL.
+const DOCUMENT_ENGINE_URL = process.env.DOCUMENT_ENGINE_URL;
+const DOCUMENT_ENGINE_PUBLIC_URL = process.env.DOCUMENT_ENGINE_PUBLIC_URL || DOCUMENT_ENGINE_URL;
+
+// CORS: comma-separated list of allowed origins, or unset to allow all (local dev)
+const corsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+  : null;
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOrigins ? { origin: corsOrigins } : undefined));
 app.use(express.json());
 
 // Configure multer for file uploads
@@ -101,7 +113,7 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    documentEngineUrl: process.env.DOCUMENT_ENGINE_URL,
+    documentEngineUrl: DOCUMENT_ENGINE_PUBLIC_URL,
     jwtKeysLoaded: !!privateKey,
     timestamp: new Date().toISOString(),
   });
@@ -129,7 +141,7 @@ app.post('/api/jwt', (req, res) => {
     res.json({
       jwt: token,
       documentId,
-      documentEngineUrl: process.env.DOCUMENT_ENGINE_URL,
+      documentEngineUrl: DOCUMENT_ENGINE_PUBLIC_URL,
     });
   } catch (error) {
     console.error('Error generating JWT:', error);
@@ -161,7 +173,7 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
       headers['Authorization'] = `Token token=${process.env.API_AUTH_TOKEN}`;
     }
 
-    const response = await fetch(`${process.env.DOCUMENT_ENGINE_URL}/api/documents`, {
+    const response = await fetch(`${DOCUMENT_ENGINE_URL}/api/documents`, {
       method: 'POST',
       body: req.file.buffer,
       headers,
@@ -187,7 +199,7 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
     res.json({
       documentId,
       jwt: token,
-      documentEngineUrl: process.env.DOCUMENT_ENGINE_URL,
+      documentEngineUrl: DOCUMENT_ENGINE_PUBLIC_URL,
       filename: req.file.originalname,
     });
   } catch (error) {
@@ -221,7 +233,7 @@ app.post('/api/documents/:documentId/extract', async (req, res) => {
     }
 
     const response = await fetch(
-      `${process.env.DOCUMENT_ENGINE_URL}/api/documents/${documentId}/pages/text`,
+      `${DOCUMENT_ENGINE_URL}/api/documents/${documentId}/pages/text`,
       { headers }
     );
 
@@ -521,7 +533,7 @@ app.get('/api/demo-jwt', (req, res) => {
     res.json({
       jwt: token,
       documentId,
-      documentEngineUrl: process.env.DOCUMENT_ENGINE_URL,
+      documentEngineUrl: DOCUMENT_ENGINE_PUBLIC_URL,
       note: 'This is a demo JWT. Replace "demo-document" with a real document ID.',
     });
   } catch (error) {
@@ -532,7 +544,7 @@ app.get('/api/demo-jwt', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Backend server running on http://localhost:${PORT}`);
-  console.log(`📄 Document Engine URL: ${process.env.DOCUMENT_ENGINE_URL}`);
+  console.log(`📄 Document Engine URL: ${DOCUMENT_ENGINE_URL} (browser: ${DOCUMENT_ENGINE_PUBLIC_URL})`);
   console.log(`\nAvailable endpoints:`);
   console.log(`  GET  /health - Health check`);
   console.log(`  POST /api/jwt - Generate JWT for a document`);
